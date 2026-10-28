@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classroom Portal — Smart Attendance System</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            oat: {
+              50: '#fcfbf8',
+              100: '#f7f4ed',
+              200: '#eee7db',
+              300: '#ded5c4',
+              400: '#c5b8a1',
+            },
+            sand: {
+              50: '#faf8f5',
+              100: '#f5f2eb',
+              200: '#e8e2d5',
+              300: '#dcd4c3',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            serif: ['Newsreader', 'Georgia', 'serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Google Fonts & QR Code Library -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen text-stone-900 font-sans antialiased selection:bg-stone-200">
+
+  <!-- Refined Top Navigation (NO ugly CS box, pure editorial typography) -->
+  <header class="border-b border-[#e5dfd3] bg-[#fbf9f5]/85 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-[1580px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand lockup (Refined wordmark with serif accent, zero boxy icons) -->
+      <div class="flex items-center gap-4">
+        <a href="index.html" class="group flex items-center gap-2 text-stone-500 hover:text-stone-900 transition text-xs font-medium pr-3 border-r border-[#ded5c4]">
+          <svg class="w-3.5 h-3.5 transition group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          <span>Home</span>
+        </a>
+
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-serif text-base tracking-tight font-semibold text-stone-900">SmartAttend</span>
+            <span class="text-stone-300">/</span>
+            <span class="text-xs text-stone-600 font-medium">Department of Computer Science</span>
+            <span class="text-[10px] uppercase font-mono font-medium tracking-wider bg-[#eee7db] text-stone-700 px-2 py-0.5 rounded-full border border-[#ded5c4]">
+              Live Session
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Segmented Role Switcher -->
+      <nav class="bg-[#eee8dc] p-1 rounded-xl border border-[#ded5c4] flex items-center gap-1 text-xs shadow-xs">
+        <button id="role-faculty-btn" onclick="switchRole('faculty')" class="px-3.5 py-1.5 rounded-lg transition tab-active">
+          Faculty View
+        </button>
+        <button id="role-student-btn" onclick="switchRole('student')" class="px-3.5 py-1.5 rounded-lg transition tab-inactive">
+          Student View
+        </button>
+        <button id="role-admin-btn" onclick="switchRole('admin')" class="px-3.5 py-1.5 rounded-lg transition tab-inactive">
+          Administration
+        </button>
+      </nav>
+
+      <!-- Auxiliary utilities -->
+      <div class="flex items-center gap-3">
+        <!-- Live Multi-tab Sync Indicator -->
+        <div class="hidden sm:flex items-center gap-1.5 text-[11px] text-stone-600 bg-[#f3efe6] px-2.5 py-1 rounded-lg border border-[#e5dfd3]" title="Dual-tab live sync is active">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+          <span>Sync Active</span>
+        </div>
+
+        <button onclick="openExplainerModal()" class="text-xs text-stone-600 hover:text-stone-900 font-medium px-2 py-1 rounded transition">
+          Design Notes
+        </button>
+        <button onclick="resetDemoData()" title="Reset session records to default state" class="text-xs text-stone-500 hover:text-stone-800 transition">
+          Reset Data
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN WIDE WORKSPACE -->
+  <main class="max-w-[1580px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ============================================================== -->
+    <!-- 1. FACULTY VIEW (3-Column Balanced Layout) -->
+    <!-- ============================================================== -->
+    <div id="view-faculty" class="space-y-6">
+      
+      <!-- Top Overview Banner -->
+      <div class="cream-card p-5 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-[#eee8dc] border border-[#ded5c4] flex items-center justify-center text-stone-700">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-semibold text-stone-900" id="faculty-course-title">CS301: Operating Systems</h2>
+              <span class="text-xs text-stone-600 font-mono bg-[#f4f0e6] px-2 py-0.5 rounded border border-[#ded5c4]">Lecture #28</span>
+            </div>
+            <p class="text-xs text-stone-500 mt-0.5">Prof. Arvind Raman • Room 402 (CSE Block) • 09:00 AM – 10:00 AM</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <label class="text-xs text-stone-500">Switch Course:</label>
+          <select id="course-selector" onchange="changeCourse(this.value)" class="bg-[#fbf9f5] border border-[#ded5c4] text-xs rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-stone-500 shadow-xs">
+            <option value="CS301">CS301: Operating Systems (Room 402)</option>
+            <option value="CS305">CS305: Database Systems (LH-1)</option>
+            <option value="EC204">EC204: Computer Networks (Room 308)</option>
+          </select>
+
+          <button id="toggle-session-btn" onclick="toggleAttendanceSession()" class="px-4 py-2 rounded-lg text-xs font-medium bg-stone-900 hover:bg-stone-800 text-white transition flex items-center gap-2 shadow-xs">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span id="session-btn-text">Session Active</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3-Column Balanced Dashboard Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Column 1: Daily Schedule & Instructor Information (3 Cols) -->
+        <div class="lg:col-span-3 space-y-5">
+          
+          <!-- Today's Lecture Timetable -->
+          <div class="cream-card p-5 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-[#eee8dc]">
+              <span class="text-xs font-semibold text-stone-800">Today's Schedule</span>
+              <span class="text-[11px] text-stone-500">Wednesday</span>
+            </div>
+
+            <div class="space-y-2.5 text-xs">
+              <div class="p-3 rounded-xl bg-[#f4f0e6] border border-[#ded5c4] space-y-1">
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-stone-900">Period 1 (09:00 - 10:00)</span>
+                  <span class="text-[10px] font-medium text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Current</span>
+                </div>
+                <p class="text-stone-700">CS301: Operating Systems</p>
+                <p class="text-[11px] text-stone-500">Room 402 • 30 Students</p>
+              </div>
+
+              <div class="p-3 rounded-xl bg-white border border-[#e5dfd3] space-y-1 opacity-75">
+                <div class="flex items-center justify-between">
+                  <span class="font-medium text-stone-700">Period 2 (10:15 - 11:15)</span>
+                  <span class="text-[10px] text-stone-400">Upcoming</span>
+                </div>
+                <p class="text-stone-600">CS305: Database Systems</p>
+                <p class="text-[11px] text-stone-400">Lecture Hall 1</p>
+              </div>
+
+              <div class="p-3 rounded-xl bg-white border border-[#e5dfd3] space-y-1 opacity-75">
+                <div class="flex items-center justify-between">
+                  <span class="font-medium text-stone-700">Period 4 (01:30 - 02:30)</span>
+                  <span class="text-[10px] text-stone-400">Afternoon</span>
+                </div>
+                <p class="text-stone-600">EC204: Computer Networks</p>
+                <p class="text-[11px] text-stone-400">Room 308</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Classroom Geofence Card -->
+          <div class="cream-card p-5 space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-stone-800">Geofence Perimeter</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">Armed</span>
+            </div>
+            <p class="text-stone-500 text-[11px] leading-relaxed">
+              Accepting scans within a 35-meter radius of Room 402 coordinates. Off-campus attempts are blocked.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Column 2: Dynamic QR Code Presenter Screen (4 Cols) -->
+        <div class="lg:col-span-4 cream-card p-6 flex flex-col items-center justify-between">
+          
+          <div class="w-full flex items-center justify-between pb-3 border-b border-[#eee8dc] mb-4">
+            <div>
+              <h3 class="text-xs font-semibold text-stone-800">Classroom Projection Screen</h3>
+              <p class="text-[11px] text-stone-500">Students scan this QR with their mobile devices</p>
+            </div>
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          </div>
+
+          <!-- QR Container -->
+          <div class="p-5 bg-white border border-[#ded5c4] rounded-2xl shadow-xs my-2 flex items-center justify-center">
+            <div id="qrcode-box" class="w-56 h-56 flex items-center justify-center"></div>
+          </div>
+
+          <!-- Refresh countdown and rotating token -->
+          <div class="w-full mt-4 p-4 rounded-xl bg-[#f7f4ed] border border-[#e5dfd3] space-y-3">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-stone-500">Active Nonce:</span>
+              <span id="current-token-display" class="font-mono text-stone-900 font-semibold text-xs tracking-wider">#AUTH-402</span>
+            </div>
+
+            <!-- Countdown Bar -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-[11px] text-stone-500">
+                <span>Refreshes automatically in:</span>
+                <span id="countdown-text" class="text-stone-800 font-mono font-medium">8s</span>
+              </div>
+              <div class="w-full bg-[#ded5c4] h-1.5 rounded-full overflow-hidden">
+                <div id="countdown-bar" class="bg-stone-800 h-full rounded-full transition-all duration-100 ease-linear" style="width: 100%;"></div>
+              </div>
+            </div>
+
+            <p class="text-[11px] text-stone-500 text-center leading-relaxed">
+              Tokens refresh every 8s. Prevents proxy attendance through forwarded photos.
+            </p>
+          </div>
+
+          <!-- Quick Test Check-in for Demo -->
+          <div class="w-full mt-4 pt-3 border-t border-[#eee8dc] flex items-center justify-between">
+            <span class="text-xs text-stone-500">Presentation tool:</span>
+            <button onclick="simulateRandomStudentScan()" class="text-xs text-stone-800 hover:text-stone-950 bg-white hover:bg-[#faf8f4] border border-[#ded5c4] px-3 py-1.5 rounded-lg transition font-medium shadow-xs">
+              + Simulate 1 Student Check-in
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Column 3: Live Classroom Attendance Roster (5 Cols) -->
+        <div class="lg:col-span-5 cream-card p-6 space-y-4">
+          
+          <!-- Roster Header & Real-time Metrics -->
+          <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#eee8dc]">
+            <div>
+              <h3 class="text-sm font-semibold text-stone-900">Live Classroom Roster</h3>
+              <p class="text-xs text-stone-500">Click any row to manually cycle status (Present / Late / Absent)</p>
+            </div>
+
+            <button onclick="exportFacultyReport()" class="text-xs text-stone-700 hover:text-stone-900 underline font-medium">
+              Export CSV
+            </button>
+          </div>
+
+          <!-- Stats Ribbon -->
+          <div class="grid grid-cols-4 gap-2 text-center text-xs">
+            <div class="p-2.5 rounded-xl bg-white border border-[#e5dfd3]">
+              <div class="text-[10px] text-stone-500">Enrolled</div>
+              <div class="text-sm font-semibold text-stone-900 mt-0.5" id="stat-total">30</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
+              <div class="text-[10px] text-emerald-800">Present</div>
+              <div class="text-sm font-semibold text-emerald-800 mt-0.5" id="stat-present">0</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-rose-50/70 border border-rose-200">
+              <div class="text-[10px] text-rose-800">Absent</div>
+              <div class="text-sm font-semibold text-rose-800 mt-0.5" id="stat-absent">30</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-white border border-[#e5dfd3]">
+              <div class="text-[10px] text-stone-500">Turnout</div>
+              <div class="text-sm font-semibold text-stone-900 mt-0.5" id="stat-rate">0%</div>
+            </div>
+          </div>
+
+          <!-- Search and filter -->
+          <div class="flex items-center justify-between gap-2 text-xs">
+            <input type="text" id="roster-search" oninput="filterRoster()" placeholder="Search name or roll number..." class="flex-1 bg-white border border-[#ded5c4] rounded-lg px-3 py-1.5 text-stone-800 placeholder-stone-400 focus:outline-none focus:border-stone-500 shadow-xs">
+            <div class="flex items-center gap-1 bg-[#eee8dc] p-1 rounded-lg border border-[#ded5c4]">
+              <button onclick="setRosterFilter('all')" class="roster-filter-btn px-2.5 py-0.5 rounded text-stone-900 bg-white shadow-xs font-medium" data-filter="all">All</button>
+              <button onclick="setRosterFilter('present')" class="roster-filter-btn px-2.5 py-0.5 rounded text-stone-600 hover:text-stone-900" data-filter="present">Present</button>
+              <button onclick="setRosterFilter('absent')" class="roster-filter-btn px-2.5 py-0.5 rounded text-stone-600 hover:text-stone-900" data-filter="absent">Absent</button>
+            </div>
+          </div>
+
+          <!-- Student Roster Table -->
+          <div class="border border-[#ded5c4] rounded-xl overflow-hidden bg-white shadow-xs">
+            <div class="max-h-[380px] overflow-y-auto divide-y divide-[#eee8dc]" id="roster-container">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+          <p class="text-[11px] text-stone-500 text-right">
+            Failsafe enabled: Manual status overrides are permitted for hardware failures.
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- 2. STUDENT VIEW (Full-Width Balanced 2-Column Layout) -->
+    <!-- ============================================================== -->
+    <div id="view-student" class="hidden space-y-6">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left Column: Student Check-in Card (4 Cols) -->
+        <div class="lg:col-span-4 cream-card p-6 space-y-5">
+          
+          <!-- Student Profile -->
+          <div class="flex items-center justify-between pb-4 border-b border-[#eee8dc]">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-stone-900 text-white flex items-center justify-center font-semibold text-xs">
+                RS
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-stone-900">Rahul Sharma</h3>
+                <p class="text-xs text-stone-500">Roll: 21CS042 • CSE-B (Sem 6)</p>
+              </div>
+            </div>
+            <span class="text-xs font-medium text-stone-600 bg-[#f4f0e6] px-2.5 py-1 rounded-md border border-[#ded5c4]">
+              Enrolled
+            </span>
+          </div>
+
+          <!-- Geofence Status -->
+          <div id="geofence-card" class="p-4 rounded-xl bg-[#f7f4ed] border border-[#e5dfd3] space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-stone-600 font-medium">Classroom GPS Geofence</span>
+              <span id="geofence-status-pill" class="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+                Inside Room 402 (12m)
+              </span>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-stone-500">
+              <span id="geofence-location-text">CS Block, 4th Floor</span>
+              <button onclick="toggleGeofenceSimulation()" class="text-stone-700 hover:text-stone-900 underline font-medium">
+                Simulate Off-Campus
+              </button>
+            </div>
+          </div>
+
+          <!-- Active Class Check-in Action -->
+          <div class="p-5 rounded-xl bg-white border border-[#ded5c4] space-y-3 shadow-xs">
+            <div>
+              <span class="text-[10px] text-stone-500 uppercase tracking-wider font-mono font-medium">Active Lecture Ready</span>
+              <h4 class="text-sm font-semibold text-stone-900">CS301: Operating Systems</h4>
+              <p class="text-xs text-stone-500">Prof. Arvind Raman • Room 402</p>
+            </div>
+
+            <button id="student-scan-btn" onclick="performStudentCheckIn()" class="w-full py-3 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-medium text-xs transition flex items-center justify-center gap-2 shadow-xs">
+              <span id="scan-btn-label">Confirm Attendance</span>
+            </button>
+
+            <!-- Success Card -->
+            <div id="scan-success-card" class="hidden p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1">
+              <div class="font-medium flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                <span>Marked Present for CS301</span>
+              </div>
+              <p class="text-[11px] text-emerald-700">Timestamp: <span id="scan-receipt-time">09:14 AM</span> • Verified with professor screen</p>
+            </div>
+
+            <div class="text-[11px] text-stone-400 text-center pt-1">
+              Single-device binding active: OnePlus 11R.
+            </div>
+          </div>
+
+          <!-- Submit leave action -->
+          <div class="pt-2">
+            <button onclick="openLeaveModal()" class="w-full py-2.5 px-3 rounded-xl text-xs font-medium text-stone-700 bg-white hover:bg-[#faf8f4] border border-[#ded5c4] transition text-center shadow-xs">
+              Submit On-Duty or Medical Form
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Subject Radar & Requirements Calculator (8 Cols) -->
+        <div class="lg:col-span-8 space-y-6">
+          
+          <!-- Subject Overview -->
+          <div class="cream-card p-6 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-[#eee8dc]">
+              <div>
+                <h3 class="text-sm font-semibold text-stone-900">Course Attendance Overview</h3>
+                <p class="text-xs text-stone-500">University standard: <strong>75% mandatory</strong> for semester examination eligibility.</p>
+              </div>
+              <span class="text-xs font-medium text-stone-800 bg-[#f4f0e6] border border-[#ded5c4] px-3 py-1 rounded-lg">
+                Overall: 79.4%
+              </span>
+            </div>
+
+            <!-- Subject Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="student-subjects-grid">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+          <!-- Attendance Requirement Calculator -->
+          <div class="cream-card p-6 space-y-4">
+            <div>
+              <h3 class="text-sm font-semibold text-stone-900">Attendance Planning Calculator</h3>
+              <p class="text-xs text-stone-500">Calculate permissible absences or required consecutive attendances to maintain threshold.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label class="block text-stone-600 mb-1">Subject</label>
+                <select id="calc-subject" onchange="runAttendanceCalculator()" class="w-full bg-white border border-[#ded5c4] rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-stone-500 shadow-xs">
+                  <option value="CS301">CS301: Operating Systems (24/28 = 85.7%)</option>
+                  <option value="CS305">CS305: Database Systems (18/25 = 72.0%)</option>
+                  <option value="EC204">EC204: Computer Networks (19/27 = 70.3%)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-stone-600 mb-1">Target Threshold</label>
+                <select id="calc-target" onchange="runAttendanceCalculator()" class="w-full bg-white border border-[#ded5c4] rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-stone-500 shadow-xs">
+                  <option value="75">75% (Examination Eligibility Standard)</option>
+                  <option value="80">80% (Academic Good Standing)</option>
+                  <option value="85">85% (Distinction)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Calculation result message -->
+            <div id="calc-result-box" class="p-4 rounded-xl bg-[#f7f4ed] border border-[#e5dfd3] text-xs space-y-1">
+              <div class="font-medium text-stone-900" id="calc-title">Status: Eligible</div>
+              <div class="text-stone-600 leading-relaxed" id="calc-desc">You can miss 2 more classes while remaining above 75%.</div>
+            </div>
+          </div>
+
+          <!-- Past Leave & OD Records -->
+          <div class="cream-card p-6 space-y-3">
+            <h3 class="text-sm font-semibold text-stone-900">On-Duty & Medical Records</h3>
+            <div class="divide-y divide-[#eee8dc] text-xs" id="student-leaves-list">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- 3. HOD & ADMIN VIEW (Full Width) -->
+    <!-- ============================================================== -->
+    <div id="view-admin" class="hidden space-y-6">
+      
+      <!-- Metrics row -->
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        
+        <div class="cream-card p-5">
+          <div class="text-xs text-stone-500">Department Average</div>
+          <div class="text-2xl font-semibold text-stone-900 mt-1">81.4%</div>
+          <div class="text-[11px] text-stone-500 mt-1">Across 3 active sections</div>
+        </div>
+
+        <div class="cream-card p-5">
+          <div class="text-xs text-stone-500">Students Below 75%</div>
+          <div class="text-2xl font-semibold text-stone-900 mt-1" id="admin-defaulters-count">5 Students</div>
+          <div class="text-[11px] text-rose-700 mt-1">Notice required before admit cards</div>
+        </div>
+
+        <div class="cream-card p-5">
+          <div class="text-xs text-stone-500">Lectures Conducted Today</div>
+          <div class="text-2xl font-semibold text-stone-900 mt-1">24 Sessions</div>
+          <div class="text-[11px] text-stone-500 mt-1">100% verified via dynamic QR</div>
+        </div>
+
+        <div class="cream-card p-5">
+          <div class="text-xs text-stone-500">Proxy Attempts Blocked</div>
+          <div class="text-2xl font-semibold text-stone-900 mt-1">18 Blocked</div>
+          <div class="text-[11px] text-stone-500 mt-1">Expired tokens & geofence traps</div>
+        </div>
+
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Defaulters Table (8 Cols) -->
+        <div class="lg:col-span-8 cream-card p-6 space-y-4">
+          
+          <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#eee8dc]">
+            <div>
+              <h3 class="text-sm font-semibold text-stone-900">Defaulter Students (&lt; 75%)</h3>
+              <p class="text-xs text-stone-500">Students at risk of being barred from Semester Examinations.</p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button onclick="triggerBulkDefaulterAlert()" class="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-stone-900 hover:bg-stone-800 text-white transition shadow-xs">
+                Send Notice
+              </button>
+              <button onclick="exportUniversityComplianceReport()" class="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-[#faf8f4] border border-[#ded5c4] text-stone-800 transition shadow-xs">
+                Export CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="border border-[#ded5c4] rounded-xl overflow-x-auto bg-white shadow-xs">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-[#fbf9f5] text-stone-600 border-b border-[#ded5c4]">
+                <tr>
+                  <th class="py-3 px-4 font-medium">Student Name</th>
+                  <th class="py-3 px-4 font-medium">Roll No</th>
+                  <th class="py-3 px-4 font-medium">Overall Attendance</th>
+                  <th class="py-3 px-4 font-medium">Lowest Subject</th>
+                  <th class="py-3 px-4 font-medium text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="defaulters-table-body" class="divide-y divide-[#eee8dc]">
+                <!-- Dynamically populated via JS -->
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+        <!-- OD Queue (4 Cols) -->
+        <div class="lg:col-span-4 cream-card p-6 space-y-3">
+          <h3 class="text-sm font-semibold text-stone-900">Pending Leave & OD Approvals</h3>
+          <p class="text-xs text-stone-500 pb-2 border-b border-[#eee8dc]">Verification queue for HOD approval</p>
+          <div class="divide-y divide-[#eee8dc] text-xs" id="admin-od-queue">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- MODALS -->
+  <!-- ============================================================== -->
+
+  <!-- Design Notes Modal -->
+  <div id="modal-explainer" class="hidden fixed inset-0 z-50 bg-stone-900/30 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white border border-[#ded5c4] rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl text-xs">
+      <div class="flex items-center justify-between pb-3 border-b border-[#eee8dc]">
+        <h3 class="text-sm font-semibold text-stone-900">Key Problems Solved</h3>
+        <button onclick="closeExplainerModal()" class="text-stone-400 hover:text-stone-700 text-sm">✕</button>
+      </div>
+
+      <div class="space-y-3 text-stone-700 leading-relaxed">
+        <div>
+          <h4 class="font-medium text-stone-900">1. Eliminates Proxy Attendance</h4>
+          <p class="text-stone-500">The QR token refreshes every 8 seconds. Screenshots forwarded via WhatsApp or Telegram expire before peers can scan them.</p>
+        </div>
+        <div>
+          <h4 class="font-medium text-stone-900">2. Zero Classroom Time Wasted</h4>
+          <p class="text-stone-500">The entire class checks in concurrently within 60 seconds while the professor begins the lecture.</p>
+        </div>
+        <div>
+          <h4 class="font-medium text-stone-900">3. Geofence Verification</h4>
+          <p class="text-stone-500">Scans from canteens or hostels are blocked using distance verification to the classroom perimeter.</p>
+        </div>
+        <div>
+          <h4 class="font-medium text-stone-900">4. Early Shortage Awareness</h4>
+          <p class="text-stone-500">Live attendance percentage and calculator prevent last-minute admit-card debarments.</p>
+        </div>
+        <div>
+          <h4 class="font-medium text-stone-900">5. Manual Faculty Fallback</h4>
+          <p class="text-stone-500">Professors can adjust status for students with dead phone batteries in one click.</p>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-[#eee8dc] text-right">
+        <button onclick="closeExplainerModal()" class="px-4 py-2 bg-stone-900 text-white rounded-xl text-xs font-medium hover:bg-stone-800 transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit Leave Modal -->
+  <div id="modal-leave" class="hidden fixed inset-0 z-50 bg-stone-900/30 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white border border-[#ded5c4] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl text-xs">
+      <div class="flex items-center justify-between pb-3 border-b border-[#eee8dc]">
+        <h3 class="text-sm font-semibold text-stone-900">Submit On-Duty or Medical Request</h3>
+        <button onclick="closeLeaveModal()" class="text-stone-400 hover:text-stone-700 text-sm">✕</button>
+      </div>
+
+      <form onsubmit="handleLeaveSubmit(event)" class="space-y-3">
+        <div>
+          <label class="block font-medium text-stone-700 mb-1">Category</label>
+          <select id="leave-category" class="w-full bg-[#fbf9f5] border border-[#ded5c4] rounded-lg px-3 py-2 text-stone-800">
+            <option value="On-Duty (Symposium / Hackathon)">On-Duty (Symposium / Hackathon)</option>
+            <option value="On-Duty (Sports)">On-Duty (Sports)</option>
+            <option value="Medical Certificate">Medical Certificate</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-medium text-stone-700 mb-1">Title / Event Description</label>
+          <input type="text" id="leave-title" required placeholder="e.g. ACM Inter-College Coding Contest" class="w-full bg-[#fbf9f5] border border-[#ded5c4] rounded-lg px-3 py-2 text-stone-800">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-medium text-stone-700 mb-1">Date</label>
+            <input type="date" id="leave-date" required value="2026-10-29" class="w-full bg-[#fbf9f5] border border-[#ded5c4] rounded-lg px-3 py-2 text-stone-800">
+          </div>
+          <div>
+            <label class="block font-medium text-stone-700 mb-1">Lectures Affected</label>
+            <select id="leave-periods" class="w-full bg-[#fbf9f5] border border-[#ded5c4] rounded-lg px-3 py-2 text-stone-800">
+              <option value="Full Day">Full Day</option>
+              <option value="Morning Lectures">Morning Lectures</option>
+              <option value="Afternoon Lectures">Afternoon Lectures</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-[#eee8dc] flex justify-end gap-2">
+          <button type="button" onclick="closeLeaveModal()" class="px-3.5 py-1.5 rounded-lg border border-[#ded5c4] text-stone-600 hover:text-stone-900">
+            Cancel
+          </button>
+          <button type="submit" class="px-4 py-1.5 rounded-lg bg-stone-900 text-white font-medium hover:bg-stone-800">
+            Submit Request
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Minimal Toast -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

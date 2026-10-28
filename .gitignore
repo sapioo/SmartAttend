@@ -1,0 +1,5 @@
+node_modules/
+.vercel/
+.gemini/
+.env*
+.DS_Store
